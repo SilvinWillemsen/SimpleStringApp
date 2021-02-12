@@ -1,0 +1,109 @@
+#include "MainComponent.h"
+
+//==============================================================================
+MainComponent::MainComponent()
+{
+    // Moved setSize() (which calls resized) to prepareToPlay as our components need a sample rate before they can get initialised.
+    
+    // Some platforms require permissions to open input channels so request that here
+    if (juce::RuntimePermissions::isRequired (juce::RuntimePermissions::recordAudio)
+        && ! juce::RuntimePermissions::isGranted (juce::RuntimePermissions::recordAudio))
+    {
+        juce::RuntimePermissions::request (juce::RuntimePermissions::recordAudio,
+                                           [&] (bool granted) { setAudioChannels (granted ? 2 : 0, 2); });
+    }
+    else
+    {
+        // Specify the number of input and output channels that we want to open
+        setAudioChannels (2, 2);
+    }
+}
+
+MainComponent::~MainComponent()
+{
+    // This shuts down the audio device and clears the audio source.
+    shutdownAudio();
+}
+
+//==============================================================================
+void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRate)
+{
+    //// Set the paramters ///
+    NamedValueSet parameters;
+    
+    // parameters you'll use to initialise more than one other parameter should be defined here
+    double r = 0.0005;
+    
+    parameters.set ("L", 1);
+    parameters.set ("rho", 7850);
+    parameters.set ("A", r * r * double_Pi);
+    parameters.set ("T", 300);
+    parameters.set ("E", 2e11);
+    parameters.set ("I", r * r * r * r * double_Pi * 0.25);
+    parameters.set ("sigma0", 1);
+    parameters.set ("sigma1", 0.005);
+    
+    //// Initialise an instance of the SimpleString class ////
+    mySimpleString = std::make_unique<SimpleString> (parameters, 1.0 / sampleRate);
+    
+    addAndMakeVisible (mySimpleString.get()); // add the string to the application
+    
+    // Moved setSize() (which calls resized) from the constructor to here as our components need a sample rate before they can get initialised.
+    setSize (800, 600);
+
+}
+
+void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill)
+{
+    bufferToFill.clearActiveBufferRegion();
+    
+    // Get pointers to output locations
+    float* const channelData1 = bufferToFill.buffer->getWritePointer (0, bufferToFill.startSample);
+    float* const channelData2 = bufferToFill.buffer->getWritePointer (1, bufferToFill.startSample);
+
+    float output = 0.0;
+    for (int i = 0; i < bufferToFill.numSamples; ++i)
+    {
+        mySimpleString->calculateScheme();
+        mySimpleString->updateStates();
+        
+        output = mySimpleString->getOutput (0.8); // get output at 0.8L of the string
+        channelData1[i] = limit (output);
+        channelData2[i] = limit (output);
+    }
+}
+
+void MainComponent::releaseResources()
+{
+    // This will be called when the audio device stops, or when it is being
+    // restarted due to a setting change.
+
+    // For more details, see the help for AudioProcessor::releaseResources()
+}
+
+//==============================================================================
+void MainComponent::paint (juce::Graphics& g)
+{
+}
+
+void MainComponent::resized()
+{
+    // put the string in the application
+    mySimpleString->setBounds (getLocalBounds());
+}
+
+// limiter
+double MainComponent::limit (double val)
+{
+    if (val < -1)
+    {
+        val = -1;
+        return val;
+    }
+    else if (val > 1)
+    {
+        val = 1;
+        return val;
+    }
+    return val;
+}
