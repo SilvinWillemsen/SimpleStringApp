@@ -55,20 +55,17 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
 void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill)
 {
     bufferToFill.clearActiveBufferRegion();
-//    std::cout << bufferToFill.buffer->getNumChannels() << std::endl;
-    // Get pointers to output locations
+
     int numChannels = bufferToFill.buffer->getNumChannels();
-    
+    // Get pointers to output locations
+
     float* const channelData1 = bufferToFill.buffer->getWritePointer (0, bufferToFill.startSample);
-    float* const channelData2 = bufferToFill.buffer->getNumChannels() > 1 ? bufferToFill.buffer->getWritePointer (1, bufferToFill.startSample) : nullptr;
+    float* const channelData2 = numChannels > 1 ? bufferToFill.buffer->getWritePointer (1, bufferToFill.startSample) : nullptr;
 
     float output = 0.0;
-    
-    std::vector<float* const*> curChannel (2, 0);
-    curChannel[0] = &channelData1;
-    curChannel[1] = &channelData2;
 
-    
+    std::vector<float* const*> curChannel {&channelData1, &channelData2};
+
     for (int i = 0; i < bufferToFill.numSamples; ++i)
     {
         mySimpleString->calculateScheme();
