@@ -134,8 +134,8 @@ void SimpleString::excite()
 
     for (int l = start; l < end; ++l)
     {
-        u[1][l] += 0.5 * (1 - cos(2.0 * double_Pi * l / width));
-        u[2][l] += 0.5 * (1 - cos(2.0 * double_Pi * l / width));
+        u[1][l] += 0.5 * (1 - cos(2.0 * double_Pi * (l-start) / width));
+        u[2][l] += 0.5 * (1 - cos(2.0 * double_Pi * (l-start) / width));
     }
     
 }

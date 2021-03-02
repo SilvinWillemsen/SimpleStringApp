@@ -3,8 +3,8 @@
 //==============================================================================
 MainComponent::MainComponent()
 {
-    // Moved setSize() (which calls resized) to prepareToPlay as our components need a sample rate before they can get initialised.
-    
+    setSize (800, 600);
+
     // Some platforms require permissions to open input channels so request that here
     if (juce::RuntimePermissions::isRequired (juce::RuntimePermissions::recordAudio)
         && ! juce::RuntimePermissions::isGranted (juce::RuntimePermissions::recordAudio))
@@ -48,28 +48,35 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
     
     addAndMakeVisible (mySimpleString.get()); // add the string to the application
     
-    // Moved setSize() (which calls resized) from the constructor to here as our components need a sample rate before they can get initialised.
-    setSize (800, 600);
-
+    // Call resized again as our components need a sample rate before they can get initialised.
+    resized();
 }
 
 void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill)
 {
     bufferToFill.clearActiveBufferRegion();
-    
+//    std::cout << bufferToFill.buffer->getNumChannels() << std::endl;
     // Get pointers to output locations
+    int numChannels = bufferToFill.buffer->getNumChannels();
+    
     float* const channelData1 = bufferToFill.buffer->getWritePointer (0, bufferToFill.startSample);
-    float* const channelData2 = bufferToFill.buffer->getWritePointer (1, bufferToFill.startSample);
+    float* const channelData2 = bufferToFill.buffer->getNumChannels() > 1 ? bufferToFill.buffer->getWritePointer (1, bufferToFill.startSample) : nullptr;
 
     float output = 0.0;
+    
+    std::vector<float* const*> curChannel (2, 0);
+    curChannel[0] = &channelData1;
+    curChannel[1] = &channelData2;
+
+    
     for (int i = 0; i < bufferToFill.numSamples; ++i)
     {
         mySimpleString->calculateScheme();
         mySimpleString->updateStates();
         
         output = mySimpleString->getOutput (0.8); // get output at 0.8L of the string
-        channelData1[i] = limit (output);
-        channelData2[i] = limit (output);
+        for (int channel = 0; channel < numChannels; ++channel)
+            curChannel[channel][0][i] = limit(output);
     }
 }
 
@@ -89,7 +96,8 @@ void MainComponent::paint (juce::Graphics& g)
 void MainComponent::resized()
 {
     // put the string in the application
-    mySimpleString->setBounds (getLocalBounds());
+    if (mySimpleString != nullptr)
+        mySimpleString->setBounds (getLocalBounds());
 }
 
 // limiter
