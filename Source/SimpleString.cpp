@@ -127,17 +127,24 @@ void SimpleString::excite()
     
     double width = 10;
     double pos = 0.3;
-    int start = floor((N+1) * pos);
-    int end = start+width;
+    int start = std::max (floor((N+1) * pos) - floor(width * 0.5), 1.0);
 
-    // note the addition here
-
-    for (int l = start; l < end; ++l)
+    for (int l = 0; l < width; ++l)
     {
-        u[1][l] += 0.5 * (1 - cos(2.0 * double_Pi * (l-start) / width));
-        u[2][l] += 0.5 * (1 - cos(2.0 * double_Pi * (l-start) / width));
+        // make sure we're not going out of bounds (under construction...)
+        int idx = l+start;
+//        if (idx > N)
+//            break;
+        u[1][idx] += 0.5 * (1 - cos(2.0 * double_Pi * l / (width-1.0)));
+        u[2][idx] += 0.5 * (1 - cos(2.0 * double_Pi * l / (width-1.0)));
+//        std::cout << l << std::endl;
     }
-    
+
+    // print excitation
+    for (int l = 0; l <= N; ++l)
+    {
+        std::cout << u[1][l] << std::endl;
+    }
 }
 
 void SimpleString::mouseDown (const MouseEvent& e)
