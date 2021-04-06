@@ -8,9 +8,9 @@
             file="Source/SimpleString.cpp"/>
       <FILE id="aGD8Dj" name="SimpleString.h" compile="0" resource="0" file="Source/SimpleString.h"/>
       <FILE id="vPlLEL" name="Main.cpp" compile="1" resource="0" file="Source/Main.cpp"/>
-      <FILE id="XPYA0L" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
       <FILE id="ZgQUzY" name="MainComponent.cpp" compile="1" resource="0"
             file="Source/MainComponent.cpp"/>
+      <FILE id="XPYA0L" name="MainComponent.h" compile="0" resource="0" file="Source/MainComponent.h"/>
     </GROUP>
   </MAINGROUP>
   <JUCEOPTIONS JUCE_STRICT_REFCOUNTEDPOINTER="1"/>

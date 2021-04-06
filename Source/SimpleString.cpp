@@ -58,13 +58,13 @@ k (k)
     B1 = sigma0 * k;
     B2 = (2.0 * sigma1 * k) / (h * h);
     
-    D = 1.0 / (1.0 + sigma0 * k);
-    
     A1 = 2.0 - 2.0 * lambdaSq - 6.0 * muSq - 2.0 * B2; // u_l^n
     A2 = lambdaSq + 4.0 * muSq + B2;                   // u_{l+-1}^n
     A3 = -muSq;                                        // u_{l+-2}^n
     A4 = B1 - 1.0 + 2.0 * B2;                          // u_l^{n-1}
     A5 = -B2;                                          // u_{l+-1}^{n-1}
+    
+    D = 1.0 / (1.0 + sigma0 * k);                      // u_l^{n+1}
     
     // Divide by u_l^{n+1} term
     A1 *= D;
@@ -87,21 +87,49 @@ void SimpleString::paint (juce::Graphics& g)
        drawing code..
     */
 
-    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));   // clear the background
+    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId)); // clear the background
+    
+    Path stringState = visualiseState (g, 100);
+    g.setColour(Colours::cyan); // choose your favourite colour
+    g.strokePath(visualiseState (g, 100), // visualScaling depends on your excitation
+                 PathStrokeType(2.0f));
 
-    g.setColour (juce::Colours::grey);
-    g.drawRect (getLocalBounds(), 1);   // draw an outline around the component
+}
 
-    g.setColour (juce::Colours::white);
-    g.setFont (14.0f);
-    g.drawText ("SimpleString", getLocalBounds(),
-                juce::Justification::centred, true);   // draw some placeholder text
+Path SimpleString::visualiseState (Graphics& g, double visualScaling)
+{
+    // String-boundaries are in the vertical middle of the component
+    double stringBoundaries = getHeight() / 2.0;
+    
+    // initialise path
+    Path stringPath;
+    
+    // start path
+    stringPath.startNewSubPath (0, -u[1][0] * visualScaling + stringBoundaries);
+    
+    double spacing = getWidth() / static_cast<double>(N);
+    double x = spacing;
+    
+    for (int l = 1; l <= N; l++) // if you don't save the boundaries use l < N
+    {
+        float newY = -u[1][l] * visualScaling + stringBoundaries; // Needs to be -u, because a positive u would visually go down
+        if (isnan(x) || isinf(abs(x)) || isnan(u[1][l]) || isinf(abs(u[1][l])))
+            std::cout << "Wait" << std::endl;
+        
+        // if we get NAN values, make sure that we don't get an exception
+        if (isnan(newY))
+            newY = 0;
+        
+        stringPath.lineTo (x, newY);
+        x += spacing;
+    }
+    // if you don't save the boundaries, and add a stringPath.lineTo (x, getWidth()) here to end the statedrawing
+
+    return stringPath;
 }
 
 void SimpleString::resized()
 {
-    // This method is where you should set the bounds of any child
-    // components that your component contains..
 
 }
 
@@ -115,6 +143,7 @@ void SimpleString::calculateScheme()
 
 void SimpleString::updateStates()
 {
+    // Do a pointer-switch. MUCH quicker than copying two entire state vectors every time-step.
     double* uTmp = u[2];
     u[2] = u[1];
     u[1] = u[0];
@@ -123,31 +152,32 @@ void SimpleString::updateStates()
 
 void SimpleString::excite()
 {
-    // Arbitrary excitation function. Just used this for testing purposes
+    //// Arbitrary excitation function (raised cosine) ////
     
+    // width (in grid points) of the excitation
     double width = 10;
-    double pos = 0.3;
-    int start = std::max (floor((N+1) * pos) - floor(width * 0.5), 1.0);
+    
+    // make sure we're not going out of bounds at the left boundary
+    int start = std::max (floor((N+1) * excitationLoc) - floor(width * 0.5), 1.0);
 
     for (int l = 0; l < width; ++l)
     {
-        // make sure we're not going out of bounds (under construction...)
-        int idx = l+start;
-//        if (idx > N)
-//            break;
-        u[1][idx] += 0.5 * (1 - cos(2.0 * double_Pi * l / (width-1.0)));
-        u[2][idx] += 0.5 * (1 - cos(2.0 * double_Pi * l / (width-1.0)));
-//        std::cout << l << std::endl;
+        // make sure we're not going out of bounds at the right boundary (this does 'cut off' the raised cosine)
+        if (l+start > (clamped ? N - 2 : N - 1))
+            break;
+        
+        u[1][l+start] += 0.5 * (1 - cos(2.0 * double_Pi * l / (width-1.0)));
+        u[2][l+start] += 0.5 * (1 - cos(2.0 * double_Pi * l / (width-1.0)));
     }
-
-    // print excitation
-    for (int l = 0; l <= N; ++l)
-    {
-        std::cout << u[1][l] << std::endl;
-    }
+    // Disable the excitation flag to only excite once
+    excitationFlag = false;
 }
 
 void SimpleString::mouseDown (const MouseEvent& e)
 {
-    excite();
+    // Get the excitation location as a ratio between the x-location of the mouse-click and the width of the app
+    excitationLoc = e.x / static_cast<double> (getWidth());
+    
+    // Activate the excitation flag to be used by the MainComponent to excite the string
+    excitationFlag = true;
 }

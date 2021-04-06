@@ -15,12 +15,15 @@ MainComponent::MainComponent()
     else
     {
         // Specify the number of input and output channels that we want to open
-        setAudioChannels (2, 2);
+        setAudioChannels (0, 2);
     }
 }
 
 MainComponent::~MainComponent()
 {
+    // Stop the graphics update
+    stopTimer();
+
     // This shuts down the audio device and clears the audio source.
     shutdownAudio();
 }
@@ -50,6 +53,8 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
     
     // Call resized again as our components need a sample rate before they can get initialised.
     resized();
+    
+    startTimerHz (15); // start the timer (15 Hz is a nice tradeoff between CPU usage and update speed)
 }
 
 void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill)
@@ -57,15 +62,19 @@ void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& buffe
     bufferToFill.clearActiveBufferRegion();
 
     int numChannels = bufferToFill.buffer->getNumChannels();
+    
     // Get pointers to output locations
-
     float* const channelData1 = bufferToFill.buffer->getWritePointer (0, bufferToFill.startSample);
     float* const channelData2 = numChannels > 1 ? bufferToFill.buffer->getWritePointer (1, bufferToFill.startSample) : nullptr;
 
     float output = 0.0;
 
     std::vector<float* const*> curChannel {&channelData1, &channelData2};
-
+    
+    // only do control stuff out of the buffer (at least work with flags so that control doesn't interfere with the scheme calculation)
+    if (mySimpleString->shouldExcite())
+        mySimpleString->excite();
+        
     for (int i = 0; i < bufferToFill.numSamples; ++i)
     {
         mySimpleString->calculateScheme();
@@ -111,4 +120,9 @@ double MainComponent::limit (double val)
         return val;
     }
     return val;
+}
+
+void MainComponent::timerCallback()
+{
+    repaint(); // update the graphics X times a second
 }

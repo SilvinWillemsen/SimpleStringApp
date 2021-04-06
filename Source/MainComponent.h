@@ -7,7 +7,8 @@
     This component lives inside our window, and this is where you should put all
     your controls and content.
 */
-class MainComponent  : public juce::AudioAppComponent
+class MainComponent  : public juce::AudioAppComponent,
+                       public Timer // for graphics refresh
 {
 public:
     //==============================================================================
@@ -24,6 +25,8 @@ public:
     void resized() override;
 
     double limit (double val); // limiter for your ears
+    
+    void timerCallback();
     
 private:
     //==============================================================================
