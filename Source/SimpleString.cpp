@@ -12,19 +12,23 @@
 #include "SimpleString.h"
 
 //==============================================================================
-SimpleString::SimpleString (NamedValueSet& parameters, double k) :
-L (*parameters.getVarPointer ("L")),
-rho (*parameters.getVarPointer ("rho")),
-A (*parameters.getVarPointer ("A")),
-T (*parameters.getVarPointer ("T")),
-E (*parameters.getVarPointer ("E")),
-I (*parameters.getVarPointer ("I")),
-sigma0 (*parameters.getVarPointer ("sigma0")),
-sigma1 (*parameters.getVarPointer ("sigma1")),
-k (k)
+SimpleString::SimpleString (NamedValueSet& parameters, double k) : k (k)
 {
-    cSq = T / (rho * A);                // Calculate wave speed (squared)
-    kappaSq = E * I / (rho * A);        // Calculate stiffness coefficient squared
+    // Initialise member variables using the parameter set
+    L = *parameters.getVarPointer ("L");
+    rho = *parameters.getVarPointer ("rho");
+    A = *parameters.getVarPointer ("A");
+    T = *parameters.getVarPointer ("T");
+    E = *parameters.getVarPointer ("E");
+    I = *parameters.getVarPointer ("I");
+    sigma0 = *parameters.getVarPointer ("sigma0");
+    sigma1 = *parameters.getVarPointer ("sigma1");
+    
+    // Calculate wave speed (squared)
+    cSq = T / (rho * A);
+    
+    // Calculate stiffness coefficient (squared)
+    kappaSq = E * I / (rho * A);
 
     double stabilityTerm = cSq * k * k + 4.0 * sigma1 * k; // just easier to write down below
     
@@ -36,12 +40,7 @@ k (k)
     muSq = kappaSq * k * k / (h * h * h * h);
     
     // initialise vectors
-    uStates.reserve (3); // prevents allocation errors
-    
-    for (int i = 0; i < 3; ++i)
-        uStates.push_back (std::vector<double> (N+1, 0));
-    
-    u.resize (3);
+    uStates = std::vector<std::vector<double>> (3, std::vector<double>(N+1, 0));
     
     /*  Make u pointers point to the first index of the state vectors.
         To use u (and obtain a vector from the state vectors) use indices like u[n][l] where,
@@ -51,48 +50,46 @@ k (k)
         Also see calculateScheme()
      */
     
+    u.resize (3, nullptr);
+    
     for (int i = 0; i < 3; ++i)
         u[i] = &uStates[i][0];
     
     // set coefficients for update equation
-    B1 = sigma0 * k;
-    B2 = (2.0 * sigma1 * k) / (h * h);
+    S1 = sigma0 * k;
+    S2 = (2.0 * sigma1 * k) / (h * h);
     
-    A1 = 2.0 - 2.0 * lambdaSq - 6.0 * muSq - 2.0 * B2; // u_l^n
-    A2 = lambdaSq + 4.0 * muSq + B2;                   // u_{l+-1}^n
-    A3 = -muSq;                                        // u_{l+-2}^n
-    A4 = B1 - 1.0 + 2.0 * B2;                          // u_l^{n-1}
-    A5 = -B2;                                          // u_{l+-1}^{n-1}
+    B1 = 2.0 - 2.0 * lambdaSq - 6.0 * muSq - 2.0 * S2; // u_l^n
+    B2 = lambdaSq + 4.0 * muSq + S2;                   // u_{l+-1}^n
+    B3 = -muSq;                                        // u_{l+-2}^n
+    C1 = S1 - 1.0 + 2.0 * S2;                          // u_l^{n-1}
+    C2 = -S2;                                          // u_{l+-1}^{n-1}
     
-    D = 1.0 / (1.0 + sigma0 * k);                      // u_l^{n+1}
+    D = 1.0 / (1.0 + S1);                      // u_l^{n+1}
     
     // Divide by u_l^{n+1} term
-    A1 *= D;
-    A2 *= D;
-    A3 *= D;
-    A4 *= D;
-    A5 *= D;
+    B1 *= D;
+    B2 *= D;
+    B3 *= D;
+    C1 *= D;
+    C2 *= D;
 }
 
 SimpleString::~SimpleString()
 {
+    
 }
 
 void SimpleString::paint (juce::Graphics& g)
 {
-    /* This demo code just fills the component's background and
-       draws some placeholder text to get you started.
-
-       You should replace everything in this method with your own
-       drawing code..
-    */
-
-    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId)); // clear the background
+    // clear the background
+    g.fillAll (getLookAndFeel().findColour (juce::ResizableWindow::backgroundColourId));
     
-    Path stringState = visualiseState (g, 100);
-    g.setColour(Colours::cyan); // choose your favourite colour
-    g.strokePath(visualiseState (g, 100), // visualScaling depends on your excitation
-                 PathStrokeType(2.0f));
+    // choose your favourite colour
+    g.setColour(Colours::cyan);
+    
+    // draw the state
+    g.strokePath(visualiseState (g, 100), PathStrokeType(2.0f));
 
 }
 
@@ -112,9 +109,8 @@ Path SimpleString::visualiseState (Graphics& g, double visualScaling)
     
     for (int l = 1; l <= N; l++) // if you don't save the boundaries use l < N
     {
-        float newY = -u[1][l] * visualScaling + stringBoundaries; // Needs to be -u, because a positive u would visually go down
-        if (isnan(x) || isinf(abs(x)) || isnan(u[1][l]) || isinf(abs(u[1][l])))
-            std::cout << "Wait" << std::endl;
+        // Needs to be -u, because a positive u would visually go down
+        float newY = -u[1][l] * visualScaling + stringBoundaries;
         
         // if we get NAN values, make sure that we don't get an exception
         if (isnan(newY))
@@ -136,9 +132,8 @@ void SimpleString::resized()
 void SimpleString::calculateScheme()
 {
     for (int l = 2; l < N-1; ++l) // clamped boundaries
-        u[0][l] = A1 * u[1][l] + A2 * (u[1][l + 1] + u[1][l - 1]) + A3 * (u[1][l + 2] + u[1][l - 2])
-                + A4 * u[2][l] + A5 * (u[2][l + 1] + u[2][l - 1]);
-    
+        u[0][l] = B1 * u[1][l] + B2 * (u[1][l + 1] + u[1][l - 1]) + B3 * (u[1][l + 2] + u[1][l - 2])
+                + C1 * u[2][l] + C2 * (u[2][l + 1] + u[2][l - 1]);
 }
 
 void SimpleString::updateStates()

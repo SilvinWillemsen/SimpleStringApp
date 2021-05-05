@@ -55,6 +55,7 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
     resized();
     
     startTimerHz (15); // start the timer (15 Hz is a nice tradeoff between CPU usage and update speed)
+    
 }
 
 void MainComponent::getNextAudioBlock (const juce::AudioSourceChannelInfo& bufferToFill)
@@ -121,6 +122,7 @@ double MainComponent::limit (double val)
     }
     return val;
 }
+
 
 void MainComponent::timerCallback()
 {
