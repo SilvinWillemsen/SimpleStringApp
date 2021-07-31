@@ -57,12 +57,12 @@ private:
     std::vector<double*> u;
     
     /* Scheme variables
+        - Adiv for u^{n+1} (that all terms get divided by)
         - B for u^n
         - C for u^{n-1}
-        - D for u^{n+1} (that all terms get divided by)
         - S for precalculated sigma terms
     */
-    double D, B1, B2, B3, C1, C2, S1, S2;
+    double Adiv, B0, B1, B2, C0, C1, S0, S1;
     
     // flag to tell MainComponent whether to excite the scheme or not
     bool excitationFlag = false;

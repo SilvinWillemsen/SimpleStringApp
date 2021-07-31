@@ -39,8 +39,9 @@ SimpleString::SimpleString (NamedValueSet& parameters, double k) : k (k)
     lambdaSq = cSq * k * k / (h * h);
     muSq = kappaSq * k * k / (h * h * h * h);
     
-    // initialise vectors
-    uStates = std::vector<std::vector<double>> (3, std::vector<double>(N+1, 0));
+    // Initialise vectors
+    uStates = std::vector<std::vector<double>> (3,
+                                        std::vector<double>(N+1, 0));
     
     /*  Make u pointers point to the first index of the state vectors.
         To use u (and obtain a vector from the state vectors) use indices like u[n][l] where,
@@ -50,29 +51,32 @@ SimpleString::SimpleString (NamedValueSet& parameters, double k) : k (k)
         Also see calculateScheme()
      */
     
+    // Initialise pointer vector
     u.resize (3, nullptr);
     
+    // Make set memory addresses to first index of the state vectors.
     for (int i = 0; i < 3; ++i)
         u[i] = &uStates[i][0];
     
-    // set coefficients for update equation
-    S1 = sigma0 * k;
-    S2 = (2.0 * sigma1 * k) / (h * h);
+    // Coefficients used for damping
+    S0 = sigma0 * k;
+    S1 = (2.0 * sigma1 * k) / (h * h);
     
-    B1 = 2.0 - 2.0 * lambdaSq - 6.0 * muSq - 2.0 * S2; // u_l^n
-    B2 = lambdaSq + 4.0 * muSq + S2;                   // u_{l+-1}^n
-    B3 = -muSq;                                        // u_{l+-2}^n
-    C1 = S1 - 1.0 + 2.0 * S2;                          // u_l^{n-1}
-    C2 = -S2;                                          // u_{l+-1}^{n-1}
+    // Scheme coefficients
+    B0 = 2.0 - 2.0 * lambdaSq - 6.0 * muSq - 2.0 * S1; // u_l^n
+    B1 = lambdaSq + 4.0 * muSq + S1;                   // u_{l+-1}^n
+    B2 = -muSq;                                        // u_{l+-2}^n
+    C0 = -1.0 + S0 + 2.0 * S1;                         // u_l^{n-1}
+    C1 = -S1;                                          // u_{l+-1}^{n-1}
     
-    D = 1.0 / (1.0 + S1);                      // u_l^{n+1}
+    Adiv = 1.0 / (1.0 + S0);                           // u_l^{n+1}
     
     // Divide by u_l^{n+1} term
-    B1 *= D;
-    B2 *= D;
-    B3 *= D;
-    C1 *= D;
-    C2 *= D;
+    B0 *= Adiv;
+    B1 *= Adiv;
+    B2 *= Adiv;
+    C0 *= Adiv;
+    C1 *= Adiv;
 }
 
 SimpleString::~SimpleString()
@@ -132,8 +136,8 @@ void SimpleString::resized()
 void SimpleString::calculateScheme()
 {
     for (int l = 2; l < N-1; ++l) // clamped boundaries
-        u[0][l] = B1 * u[1][l] + B2 * (u[1][l + 1] + u[1][l - 1]) + B3 * (u[1][l + 2] + u[1][l - 2])
-                + C1 * u[2][l] + C2 * (u[2][l + 1] + u[2][l - 1]);
+        u[0][l] = B0 * u[1][l] + B1 * (u[1][l + 1] + u[1][l - 1]) + B2 * (u[1][l + 2] + u[1][l - 2])
+                + C0 * u[2][l] + C1 * (u[2][l + 1] + u[2][l - 1]);
 }
 
 void SimpleString::updateStates()
