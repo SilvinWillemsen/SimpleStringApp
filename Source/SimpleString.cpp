@@ -32,7 +32,7 @@ SimpleString::SimpleString (NamedValueSet& parameters, double k) : k (k)
 
     double stabilityTerm = cSq * k * k + 4.0 * sigma1 * k; // just easier to write down below
     
-    h = sqrt (stabilityTerm + sqrt ((stabilityTerm * stabilityTerm) + 16.0 * kappaSq * k * k));
+    h = sqrt (0.5 * (stabilityTerm + sqrt ((stabilityTerm * stabilityTerm) + 16.0 * kappaSq * k * k)));
     N = floor (L / h);
     h = L / N; // recalculate h
     
