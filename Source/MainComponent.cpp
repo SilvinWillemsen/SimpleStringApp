@@ -40,10 +40,10 @@ void MainComponent::prepareToPlay (int samplesPerBlockExpected, double sampleRat
     parameters.set ("L", 1);
     parameters.set ("rho", 7850);
     parameters.set ("A", r * r * double_Pi);
-    parameters.set ("T", 300);
+    parameters.set ("T", 299.75);
     parameters.set ("E", 2e11);
     parameters.set ("I", r * r * r * r * double_Pi * 0.25);
-    parameters.set ("sigma0", 1);
+    parameters.set ("sigma0", 2);
     parameters.set ("sigma1", 0.005);
     
     //// Initialise an instance of the SimpleString class ////

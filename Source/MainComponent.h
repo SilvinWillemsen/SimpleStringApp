@@ -26,7 +26,7 @@ public:
 
     double limit (double val); // limiter for your ears
     
-    void timerCallback();
+    void timerCallback() override;
     
 private:
     //==============================================================================

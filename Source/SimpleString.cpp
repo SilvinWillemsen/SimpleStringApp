@@ -64,6 +64,7 @@ SimpleString::SimpleString (NamedValueSet& parameters, double k) : k (k)
     
     // Scheme coefficients
     B0 = 2.0 - 2.0 * lambdaSq - 6.0 * muSq - 2.0 * S1; // u_l^n
+    Bss = 2.0 - 2.0 * lambdaSq - 5.0 * muSq - 2.0 * S1;
     B1 = lambdaSq + 4.0 * muSq + S1;                   // u_{l+-1}^n
     B2 = -muSq;                                        // u_{l+-2}^n
     C0 = -1.0 + S0 + 2.0 * S1;                         // u_l^{n-1}
@@ -73,6 +74,7 @@ SimpleString::SimpleString (NamedValueSet& parameters, double k) : k (k)
     
     // Divide by u_l^{n+1} term
     B0 *= Adiv;
+    Bss *= Adiv;
     B1 *= Adiv;
     B2 *= Adiv;
     C0 *= Adiv;
@@ -138,6 +140,14 @@ void SimpleString::calculateScheme()
     for (int l = 2; l < N-1; ++l) // clamped boundaries
         u[0][l] = B0 * u[1][l] + B1 * (u[1][l + 1] + u[1][l - 1]) + B2 * (u[1][l + 2] + u[1][l - 2])
                 + C0 * u[2][l] + C1 * (u[2][l + 1] + u[2][l - 1]);
+    
+    u[0][1] = Bss * u[1][1] + B1 * (u[1][2] + u[1][0]) + B2 * u[1][3]
+            + C0 * u[2][1] + C1 * (u[2][2] + u[2][0]);
+    u[0][N-1] = Bss * u[1][N-1] + B1 * (u[1][N] + u[1][N-2]) + B2 * (u[1][N-3])
+            + C0 * u[2][N-1] + C1 * (u[2][N] + u[2][N-2]);
+
+
+    
 }
 
 void SimpleString::updateStates()

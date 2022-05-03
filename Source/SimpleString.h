@@ -62,7 +62,7 @@ private:
         - C for u^{n-1}
         - S for precalculated sigma terms
     */
-    double Adiv, B0, B1, B2, C0, C1, S0, S1;
+    double Adiv, B0, Bss, B1, B2, C0, C1, S0, S1;
     
     // flag to tell MainComponent whether to excite the scheme or not
     bool excitationFlag = false;
